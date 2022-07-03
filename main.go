@@ -2,14 +2,17 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/line/line-bot-sdk-go/v7/linebot"
 )
 
 func main() {
+
 	bot, err := linebot.New(
 		os.Getenv("CHANNEL_SECRET"),
 		os.Getenv("CHANNEL_TOKEN"),
@@ -47,6 +50,42 @@ func main() {
 					}
 				}
 			}
+		}
+	})
+
+	http.HandleFunc("/sendLineMessage", func(w http.ResponseWriter, req *http.Request) {
+		if req.Method != "POST" {
+			log.Print("POST method is required")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		length, err := strconv.Atoi(req.Header.Get("Content-Length"))
+		if err != nil {
+			log.Print("Error : Get Content-Length")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// body 取り出し
+		body := make([]byte, length)
+		length, err = req.Body.Read(body)
+		if err != nil && err != io.EOF {
+			log.Print("Error : Get body")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		log.Print("body=" + string(body))
+
+		userId := os.Getenv("USER_ID")
+		if userId != "" {
+			log.Print("userId=" + userId)
+			message := string(body)
+			if _, err := bot.PushMessage(userId, linebot.NewTextMessage(message)).Do(); err != nil {
+				log.Print(err)
+			}
+		} else {
+			log.Print("userId is empty")
 		}
 	})
 
