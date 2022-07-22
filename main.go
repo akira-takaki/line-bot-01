@@ -13,6 +13,8 @@ import (
 
 func main() {
 
+	// チャネルアクセストークン
+	// https://developers.line.biz/ja/docs/messaging-api/channel-access-tokens/
 	bot, err := linebot.New(
 		os.Getenv("CHANNEL_SECRET"),
 		os.Getenv("CHANNEL_TOKEN"),
@@ -21,8 +23,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Setup HTTP Server for receiving requests from LINE platform
-	// LINEプラットフォームからのリクエストを受信するためのHTTPサーバーのセットアップ
+	/*
+	 * LINEプラットフォームからメッセージ(Webhook)を受信する
+	 * 受信後、応答メッセージを送信する
+	 * https://developers.line.biz/ja/docs/messaging-api/receiving-messages/
+	 */
 	http.HandleFunc("/callback", func(w http.ResponseWriter, req *http.Request) {
 		// LINE bot : メッセージ受信
 		events, err := bot.ParseRequest(req)
@@ -35,6 +40,7 @@ func main() {
 			}
 			return
 		}
+
 		for _, event := range events {
 			if event.Type == linebot.EventTypeMessage {
 				switch message := event.Message.(type) {
@@ -53,6 +59,10 @@ func main() {
 		}
 	})
 
+	/*
+	 * 環境変数 USER_ID で指定されたユーザへ プッシュメッセージ を送信する
+	 * https://developers.line.biz/ja/docs/messaging-api/sending-messages/#methods-of-sending-message
+	 */
 	http.HandleFunc("/sendLineMessage", func(w http.ResponseWriter, req *http.Request) {
 		if req.Method != "POST" {
 			log.Print("POST method is required")
@@ -89,8 +99,6 @@ func main() {
 		}
 	})
 
-	// For actual use, you must support HTTPS by using `ListenAndServeTLS`, a reverse proxy or something else.
-	// 実際に使用するには、 `ListenAndServeTLS`、リバースプロキシなどを使用してHTTPSをサポートする必要があります。
 	if err := http.ListenAndServe(":"+os.Getenv("PORT"), nil); err != nil {
 		log.Fatal(err)
 	}
